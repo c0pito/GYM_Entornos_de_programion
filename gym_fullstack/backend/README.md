@@ -1,11 +1,11 @@
 # Backend Django REST para Gestor de Gimnasio
 
-Este backend reemplaza el proyecto original en Spring Boot por una API desarrollada con **Django REST Framework** y autenticación **JWT**. Utiliza una base de datos **MongoDB** mediante `djongo`.
+Este backend reemplaza el proyecto original en Spring Boot por una API desarrollada con **Django REST Framework** y autenticación **JWT**. Utiliza una base de datos **SQLite** incluida en el propio proyecto, por lo que no necesitas instalar ni levantar MongoDB.
 
 ## Requisitos
 
 - Python 3.11+
-- MongoDB (local o en la nube). Puedes levantarlo con Docker usando [`../database/docker-compose.yml`](../database/docker-compose.yml).
+- SQLite (ya incluido con Python, no se requiere instalación adicional).
 
 ## Instalación
 
@@ -22,20 +22,22 @@ Crea un archivo `.env` o exporta variables antes de ejecutar `manage.py`:
 
 ```
 DJANGO_SECRET_KEY="cambia-esta-clave"
-MONGO_DB_URI="mongodb://localhost:27017"
-MONGO_DB_NAME="gymdb"
 DJANGO_DEBUG=True
 CORS_ALLOWED_ORIGINS="http://localhost:5173"
 CSRF_TRUSTED_ORIGINS="http://localhost:5173"
 ```
 
-## Migraciones iniciales
+## Inicializar la base de datos SQLite
+
+El archivo `db.sqlite3` se crea automáticamente en la carpeta `backend` al aplicar las migraciones. Si vienes de una versión anterior que usaba MongoDB, basta con eliminar cualquier variable `MONGO_DB_*` de tu entorno y ejecutar los siguientes comandos:
 
 ```bash
 python manage.py makemigrations
 python manage.py migrate
 python manage.py createsuperuser
 ```
+
+Si quieres comenzar desde cero, simplemente elimina el archivo `db.sqlite3` y vuelve a ejecutar las migraciones.
 
 ## Datos de ejemplo opcionales
 
