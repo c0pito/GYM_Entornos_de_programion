@@ -7,6 +7,7 @@ from rest_framework.permissions import AllowAny, IsAuthenticated
 from rest_framework.response import Response
 from rest_framework.views import APIView
 from rest_framework_simplejwt.serializers import TokenObtainPairSerializer
+from rest_framework_simplejwt.tokens import RefreshToken
 from rest_framework_simplejwt.views import TokenObtainPairView, TokenRefreshView
 
 from .models import ClientMembership, Membership, Payment
@@ -54,6 +55,42 @@ class LoginView(TokenObtainPairView):
 
 class RefreshTokenView(TokenRefreshView):
     permission_classes = [AllowAny]
+
+
+class RegisterView(APIView):
+    permission_classes = [AllowAny]
+
+    def post(self, request):
+        payload = request.data.copy()
+        payload['role'] = User.Role.CLIENTE
+        serializer = UserSerializer(data=payload)
+        serializer.is_valid(raise_exception=True)
+        if 'password' not in serializer.validated_data:
+            return Response(
+                {'password': ['Este campo es obligatorio.']},
+                status=status.HTTP_400_BAD_REQUEST,
+            )
+        user = serializer.save()
+
+        refresh = RefreshToken.for_user(user)
+        user_data = UserSerializer(user).data
+
+        return Response(
+            {
+                'usuario': user_data,
+                'jwt': str(refresh.access_token),
+                'refresh': str(refresh),
+            },
+            status=status.HTTP_201_CREATED,
+        )
+
+
+class MeView(APIView):
+    permission_classes = [IsAuthenticated]
+
+    def get(self, request):
+        serializer = UserSerializer(request.user)
+        return Response(serializer.data)
 
 
 class UserViewSet(viewsets.ModelViewSet):
@@ -105,7 +142,7 @@ class MembershipViewSet(viewsets.ModelViewSet):
 
     def get_permissions(self):
         if self.action in {'list', 'retrieve'}:
-            return [IsAuthenticated()]
+            return [AllowAny()]
         return [IsAdminRole()]
 
     def create(self, request, *args, **kwargs):
