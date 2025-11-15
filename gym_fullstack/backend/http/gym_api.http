@@ -1,0 +1,92 @@
+@host = http://localhost:8000/api
+@contentType = application/json
+
+### Autenticación: login
+POST {{host}}/auth/login
+Content-Type: {{contentType}}
+
+{
+  "email": "admin@gym.com",
+  "password": "Admin123!"
+}
+
+### Autenticación: refresh token
+POST {{host}}/auth/refresh
+Content-Type: {{contentType}}
+Authorization: Bearer {{refresh_token}}
+
+{}
+
+### Perfil del usuario autenticado
+GET {{host}}/usuario/perfil
+Authorization: Bearer {{access_token}}
+
+### Actualizar perfil
+PUT {{host}}/usuario/perfil
+Content-Type: {{contentType}}
+Authorization: Bearer {{access_token}}
+
+{
+  "first_name": "NuevoNombre",
+  "last_name": "Actualizado",
+  "phone": "+57 123 456 7890"
+}
+
+### Listar usuarios (administrador)
+GET {{host}}/usuario/list
+Authorization: Bearer {{access_token}}
+
+### Crear usuario (administrador)
+POST {{host}}/usuario/
+Content-Type: {{contentType}}
+Authorization: Bearer {{access_token}}
+
+{
+  "email": "nuevo.usuario@gym.com",
+  "password": "Temporal123!",
+  "first_name": "Nuevo",
+  "last_name": "Usuario",
+  "role": "coach"
+}
+
+### Listar membresías
+GET {{host}}/membresia/list
+Authorization: Bearer {{access_token}}
+
+### Crear membresía (administrador)
+POST {{host}}/membresia/
+Content-Type: {{contentType}}
+Authorization: Bearer {{access_token}}
+
+{
+  "name": "Mensual Premium",
+  "description": "Acceso total + clases ilimitadas",
+  "price": 150000,
+  "duration_days": 30
+}
+
+### Asignar membresía a cliente (administrador)
+POST {{host}}/clientemembresia/
+Content-Type: {{contentType}}
+Authorization: Bearer {{access_token}}
+
+{
+  "client_id": "{{client_id}}",
+  "membership_id": "{{membership_id}}",
+  "start_date": "2024-01-01"
+}
+
+### Registrar pago (administrador)
+POST {{host}}/gimnasio/pago
+Content-Type: {{contentType}}
+Authorization: Bearer {{access_token}}
+
+{
+  "client_membership_id": "{{client_membership_id}}",
+  "amount": 150000,
+  "status": "paid"
+}
+
+### Consultar pagos del cliente autenticado
+GET {{host}}/gimnasio/mis-pagos
+Authorization: Bearer {{access_token}}
