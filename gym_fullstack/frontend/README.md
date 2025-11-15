@@ -30,6 +30,8 @@ VITE_API_BASE=http://localhost:8000/api
 ## Características
 
 - Inicio de sesión con JWT y almacenamiento seguro de tokens.
+- Registro público de clientes con inicio de sesión automático.
+- Sincronización automática del perfil usando el endpoint `/api/auth/me`.
 - Panel administrativo para gestionar usuarios, membresías, asignaciones y pagos.
 - Panel para clientes con actualización de perfil, resumen de membresías y pagos.
 - Estilos modernos y responsivos.

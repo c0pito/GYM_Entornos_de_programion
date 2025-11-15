@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { Link, useNavigate } from 'react-router-dom';
 
 import { useAuth } from '../context/AuthContext.jsx';
 import '../styles/login.css';
@@ -76,6 +76,11 @@ export default function LoginPage() {
         )}
 
         {message && <div className={`message ${messageType}`}>{message}</div>}
+
+        <div className="login-links">
+          <span>¿Aún no tienes cuenta?</span>
+          <Link to="/register">Regístrate aquí</Link>
+        </div>
       </div>
     </div>
   );

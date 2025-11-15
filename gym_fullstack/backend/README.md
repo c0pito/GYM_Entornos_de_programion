@@ -59,13 +59,15 @@ La API quedará disponible en `http://localhost:8000/api/`.
 
 | Método | Endpoint | Descripción |
 | --- | --- | --- |
+| POST | `/api/auth/register` | Registra un cliente y devuelve tokens JWT |
 | POST | `/api/auth/login` | Obtiene tokens JWT y datos del usuario |
 | POST | `/api/auth/refresh` | Refresca el token de acceso |
+| GET | `/api/auth/me` | Datos del usuario autenticado |
 | GET | `/api/usuario/list` | Lista de usuarios (solo administrador) |
 | POST | `/api/usuario/` | Crear usuario (solo administrador) |
 | DELETE | `/api/usuario/<id>` | Elimina usuario (solo administrador) |
 | GET/PUT | `/api/usuario/perfil` | Información y edición del perfil actual |
-| GET | `/api/membresia/list` | Lista de membresías |
+| GET | `/api/membresia/list` | Lista pública de membresías |
 | POST/DELETE | `/api/membresia/` | Crear/eliminar membresías (administrador) |
 | GET | `/api/clientemembresia/list` | Asignaciones (administrador) |
 | POST | `/api/clientemembresia/` | Crear asignación (administrador) |

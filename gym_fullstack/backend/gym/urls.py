@@ -7,9 +7,11 @@ from .views import (
     ClientMembershipViewSet,
     HealthView,
     LoginView,
+    MeView,
     MembershipViewSet,
     PaymentViewSet,
     RefreshTokenView,
+    RegisterView,
     UserViewSet,
 )
 
@@ -22,6 +24,8 @@ router.register('gimnasio', PaymentViewSet, basename='pagos')
 urlpatterns = [
     path('auth/login', LoginView.as_view(), name='token_obtain_pair'),
     path('auth/refresh', RefreshTokenView.as_view(), name='token_refresh'),
+    path('auth/register', RegisterView.as_view(), name='auth_register'),
+    path('auth/me', MeView.as_view(), name='auth_me'),
     path('health', HealthView.as_view(), name='health'),
     path('', include(router.urls)),
     path('usuario/list', UserViewSet.as_view({'get': 'list'}), name='usuario-list-alias'),
