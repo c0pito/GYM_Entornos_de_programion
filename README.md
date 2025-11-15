@@ -1,92 +1,173 @@
-# GYM_Entornos_de_programion
-Se creara un Gym
-1. Descripción General del Proyecto
-Este proyecto es un Sistema de Gestión de Gimnasio (Gym Management System) diseñado para administrar usuarios, membresías, clases y pagos en un gimnasio. Utiliza una arquitectura web con separación clara entre frontend, backend y base de datos.
+# GYM Fullstack (React + Django REST)
 
-Objetivo principal: Optimizar la gestión diaria de un gimnasio mediante una aplicación web.
-Estado actual: En desarrollo. El repositorio incluye frontend, backend y esquema de base de datos.
-Tecnologías clave:
+La solución actual del repositorio es una aplicación web fullstack dividida en:
 
-Frontend: HTML, CSS, JavaScript (en FronEnd_Gym).
-Backend: Spring Boot (Java) en Gimnasio_Copia2.
-Base de datos: MySQL (esquema en gimnasio3000.sql).
+| Carpeta | Descripción |
+| --- | --- |
+| `gym_fullstack/frontend` | Aplicación **React + Vite** que consume la API REST y ofrece paneles para administradores, entrenadores y clientes. |
+| `gym_fullstack/backend` | API en **Django REST Framework** con autenticación **JWT**, conectada a MongoDB. |
+| `gym_fullstack/database` | Utilidades para levantar MongoDB (Docker Compose) y poblarla con el script de seed. |
 
+Las carpetas `FronEnd_Gym` y `Gimnasio_Copia2` contienen prototipos anteriores (HTML plano + Spring Boot). Consulta la sección [Histórico](#histórico-de-proyectos) si necesitas trabajar con ellos; el resto del documento describe únicamente la pila React + Django.
 
-Herramientas:
+---
 
-IntelliJ IDEA para el backend.
-Visual Studio Code para el frontend.
-MySQL Workbench para la base de datos.
+## 1. Requisitos
 
+| Herramienta | Versión sugerida |
+| --- | --- |
+| Node.js / npm | Node 18+ (instala npm con Node) |
+| Python | 3.11+ |
+| MongoDB | Local o en contenedor Docker |
+| VS Code | Recomendado para ejecutar ambos proyectos |
+| Docker (opcional) | Para levantar MongoDB con `docker compose up -d` |
 
+---
 
-2. Estructura del Proyecto
-Basado en las carpetas y archivos del repositorio:
+## 2. Instalación y configuración
 
-<img width="435" height="829" alt="image" src="https://github.com/user-attachments/assets/af833fd7-116f-41e3-8ba6-7073c31711fe" />
+### 2.1 Backend (`gym_fullstack/backend`)
 
+1. Crear entorno virtual e instalar dependencias:
+   ```bash
+   cd gym_fullstack/backend
+   python -m venv .venv
+   source .venv/bin/activate  # En Windows: .venv\Scripts\activate
+   pip install -r requirements.txt
+   ```
+2. Configurar variables de entorno en un archivo `.env` (mismo directorio):
+   ```env
+   DJANGO_SECRET_KEY=clave-super-secreta
+   DJANGO_DEBUG=True
+   MONGO_DB_URI=mongodb://localhost:27017
+   MONGO_DB_NAME=gymdb
+   CORS_ALLOWED_ORIGINS=http://localhost:5173
+   CSRF_TRUSTED_ORIGINS=http://localhost:5173
+   ACCESS_TOKEN_LIFETIME_MIN=30      # opcional
+   REFRESH_TOKEN_LIFETIME_MIN=4320   # opcional (3 días)
+   ```
+   *Ajusta los orígenes si cambias el puerto del frontend o desplegarás en otra URL.*
+3. Preparar la base de datos:
+   - Si usas Docker: `cd gym_fullstack/database && docker compose up -d`.
+   - Manual: asegúrate de que MongoDB escuche en `MONGO_DB_URI`.
+4. Aplicar migraciones y cargar datos de prueba (seed):
+   ```bash
+   python manage.py migrate
+   python manage.py shell < ../database/seed/seed_data.py
+   ```
+5. Levantar el backend (puerto 8000 por defecto):
+   ```bash
+   python manage.py runserver 0.0.0.0:8000
+   ```
 
-3. Instalación y Configuración
+### 2.2 Frontend (`gym_fullstack/frontend`)
 
-Clonar el repositorio:
-git clone https://github.com/miguelitowashere/GYM_Entornos_de_programion.git
-cd GYM_Entornos_de_programion
-Configurar la Base de Datos:
+1. Instalar dependencias:
+   ```bash
+   cd gym_fullstack/frontend
+   npm install
+   ```
+2. (Opcional) Crear `.env` para apuntar a otra API:
+   ```env
+   VITE_API_BASE=http://localhost:8000/api
+   VITE_API_WS=ws://localhost:8000/ws  # si habilitas websockets
+   ```
+3. Ejecutar en modo desarrollo (puerto 5173):
+   ```bash
+   npm run dev
+   ```
+   Usa `npm run dev -- --host` si necesitas exponerlo en tu LAN.
 
-Abre MySQL Workbench.
-Crea una BD: CREATE DATABASE gym_db;.
-Ejecuta gimnasio3000.sql para crear las tablas.
-Asegúrate de que las credenciales en application.properties coincidan (e.g., spring.datasource.username=root, spring.datasource.password=tu_password).
+### 2.3 Ejecutar ambos desde VS Code
 
+1. Abre el repositorio en VS Code (`File > Open Folder...`).
+2. Crea dos terminales integradas:
+   - **Terminal 1** (`gym_fullstack/backend`): activa el entorno virtual (`source .venv/bin/activate`), luego `python manage.py runserver`.
+   - **Terminal 2** (`gym_fullstack/frontend`): ejecuta `npm run dev`.
+3. Si deseas automatizarlo, añade al `tasks.json` de VS Code comandos para `python manage.py runserver` y `npm run dev` y ejecútalos con `Ctrl+Shift+B`.
+4. Verifica en el navegador:
+   - Frontend: http://localhost:5173
+   - API REST: http://localhost:8000/api/
 
-Backend (Gimnasio_Copia2):
+---
 
-Abre la carpeta Gimnasio_Copia2 en IntelliJ.
-Importa como proyecto Maven.
-Configura application.properties con tu BD:
+## 3. Credenciales y datos sembrados
 
-spring.datasource.url=jdbc:mysql://localhost:3306/gym_db
-spring.datasource.username=root
-spring.datasource.password=tu_password
-spring.jpa.hibernate.ddl-auto=update
+El script `gym_fullstack/database/seed/seed_data.py` crea los siguientes usuarios (puedes volver a ejecutarlo sin duplicar registros):
 
-Ejecuta GimnasioApplication.java: mvn spring-boot:run.
-El servidor corre en http://localhost:8080.
+| Rol | Usuario | Contraseña |
+| --- | --- | --- |
+| Superadmin | `admin@gym.com` | `Admin123!` |
+| Entrenador | `coach@gym.com` | `Coach123!` |
+| Cliente | `cliente@gym.com` | `Cliente123!` |
 
+También genera membresías (“Mensual”, “Trimestral”), asignaciones (`clientemembresia`) y pagos de ejemplo para probar dashboards y reportes.
 
-Frontend (FronEnd_Gym):
+---
 
-Abre FronEnd_Gym en VS Code.
-Usa Live Server para servir login.html en http://localhost:5500.
-Conecta al backend editando JS (e.g., fetch('http://localhost:8080/api/usuarios')).
+## 4. Endpoints principales
 
+La API está namespaced en `/api/`. Los endpoints más usados son:
 
-Pruebas:
+| Método | Endpoint | Descripción |
+| --- | --- | --- |
+| POST | `/api/auth/login` | Devuelve tokens JWT (access + refresh) y datos del usuario. |
+| POST | `/api/auth/refresh` | Renueva el token de acceso. |
+| GET/PUT | `/api/usuario/perfil` | Consulta/actualiza el perfil autenticado. |
+| GET | `/api/usuario/list` | Listado de usuarios (admin). |
+| POST/DELETE | `/api/usuario/` | Crear o eliminar usuarios (admin). |
+| GET | `/api/membresia/list` | Membresías disponibles. |
+| POST/DELETE | `/api/membresia/` | Gestión de membresías (admin). |
+| GET | `/api/clientemembresia/list` | Asignaciones de membresías (admin). |
+| POST | `/api/clientemembresia/` | Asignar membresía a cliente (admin). |
+| GET | `/api/clientemembresia/mis-membresias` | Membresías del cliente autenticado. |
+| GET | `/api/gimnasio/pagos` | Pagos registrados (admin). |
+| POST | `/api/gimnasio/pago` | Crear pago (admin). |
+| GET | `/api/gimnasio/mis-pagos` | Pagos del cliente autenticado. |
 
-Accede a http://localhost:5500/login.html.
-Prueba APIs con Postman (e.g., GET /api/usuarios).
+### Colección HTTP/Postman
 
+- **VS Code / REST Client:** Usa `gym_fullstack/backend/http/gym_api.http` para ejecutar solicitudes directamente desde el editor.
+- **Postman/Insomnia:** importa el mismo archivo (es texto plano) o crea una nueva colección reutilizando las URLs y cuerpos incluidos.
 
+Cada petición del archivo incluye ejemplos para autenticación, CRUD de usuarios, membresías y pagos. Actualiza los tokens JWT en el encabezado `Authorization: Bearer <token>` tras iniciar sesión.
 
-4. Funcionalidades Principales
+---
 
-Gestión de Usuarios: Registro, edición y eliminación (vía UsuarioControlador).
-Membresías: Administración de planes (vía MembresiaControlador).
-Pagos: Registro y seguimiento (vía PagoControlador).
-Autenticación: Login con JWT (vía SecurityConfig y JwtUtil).
-Interfaz: Páginas como administrador.html y cliente.html para gestión.
+## 5. Consumo desde el frontend
 
-5. Base de Datos (MySQL)
+1. Inicia sesión con cualquiera de las credenciales sembradas.
+2. El frontend guarda los tokens JWT y refresca automáticamente el access token cuando expira.
+3. El panel de administrador permite:
+   - Crear/editar usuarios, membresías y asignaciones.
+   - Revisar pagos y registrar nuevos.
+4. El panel de cliente muestra:
+   - Datos personales editables.
+   - Historial de membresías y pagos.
 
-Esquema definido en gimnasio3000.sql.
-Tablas principales inferidas: usuarios, membresias, pagos, etc.
+Si necesitas probar los endpoints sin interfaz, utiliza el archivo `.http` o tus propias herramientas (curl, Postman, Thunder Client).
 
-<img src="https://drive.google.com/uc?export=view&id=1h79YJGnQILi5VTn0D7gpJUX9OQO1OHsQ" 
-     alt="Diagrama de la base de datos gimnasio3000" 
-     width="435" height="829">
+---
 
-6. Posibles Mejoras
+## 6. Histórico de proyectos
 
-Agregar más detalles al README.
-Deploy en servidor (e.g., Heroku para backend).
-Tests unitarios con JUnit.
+Los directorios originales se conservan por referencia:
+
+| Carpeta | Estado |
+| --- | --- |
+| `FronEnd_Gym` | Frontend en HTML/CSS/JS estático que dependía del backend en Spring Boot. |
+| `Gimnasio_Copia2` | Backend en Spring Boot + MySQL. |
+
+No reciben mantenimiento y pueden contener configuraciones obsoletas. Para la solución vigente utiliza exclusivamente `gym_fullstack/*`.
+
+---
+
+## 7. Recursos adicionales
+
+- Diagrama y script SQL originales: `gimnasio3000.sql`.
+- Documentación específica:
+  - `gym_fullstack/frontend/README.md`
+  - `gym_fullstack/backend/README.md`
+  - `gym_fullstack/database/README.md`
+
+Con esto deberías poder levantar todo el stack en minutos y extenderlo según las necesidades del gimnasio.
