@@ -2,8 +2,13 @@
 
 from django.contrib.auth.base_user import AbstractBaseUser, BaseUserManager
 from django.contrib.auth.models import PermissionsMixin
+from datetime import timedelta
+from math import ceil
+
+from django.core.exceptions import ValidationError
 from django.core.validators import MinValueValidator
 from django.db import models
+from django.utils import timezone
 
 
 class UserManager(BaseUserManager):
@@ -71,51 +76,97 @@ class User(AbstractBaseUser, PermissionsMixin):
         return self.last_name
 
 
-class Membership(models.Model):
-    """Gym membership plans."""
+class MembershipPlan(models.Model):
+    """Membership plan that can be activated by the users."""
 
-    name = models.CharField(max_length=150)
-    description = models.TextField(blank=True)
-    price = models.DecimalField(max_digits=10, decimal_places=2, validators=[MinValueValidator(0)])
-    duration_days = models.PositiveIntegerField()
+    name = models.CharField(max_length=150, unique=True)
+    price_usd = models.DecimalField(max_digits=10, decimal_places=2, validators=[MinValueValidator(0)])
+    total_days = models.PositiveIntegerField()
+    active = models.BooleanField(default=True)
     created_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        ordering = ('name',)
 
     def __str__(self):
         return self.name
 
 
-class ClientMembership(models.Model):
-    """Assignment of a membership to a specific user."""
-
-    class Status(models.TextChoices):
-        ACTIVA = 'Activa', 'Activa'
-        VENCIDA = 'Vencida', 'Vencida'
-        PENDIENTE = 'Pendiente', 'Pendiente'
+class UserMembership(models.Model):
+    """Activation of a plan by a concrete user."""
 
     user = models.ForeignKey(User, on_delete=models.CASCADE, related_name='memberships')
-    membership = models.ForeignKey(Membership, on_delete=models.CASCADE, related_name='assignments')
-    start_date = models.DateField()
-    end_date = models.DateField()
-    status = models.CharField(max_length=20, choices=Status.choices, default=Status.PENDIENTE)
+    plan = models.ForeignKey(MembershipPlan, on_delete=models.PROTECT, related_name='activations')
+    activated_at = models.DateTimeField(default=timezone.now)
+    bonus_days = models.PositiveIntegerField(default=0)
     created_at = models.DateTimeField(auto_now_add=True)
 
+    class Meta:
+        ordering = ('-activated_at',)
+
     def __str__(self):
-        return f"{self.user.email} - {self.membership.name}"
+        return f"{self.user.email} - {self.plan.name}"
+
+    @property
+    def expires_at(self):
+        total_days = self.plan.total_days + self.bonus_days
+        return self.activated_at + timedelta(days=total_days)
+
+    @property
+    def days_left(self):
+        remaining = self.expires_at - timezone.now()
+        total_seconds = remaining.total_seconds()
+        return max(0, int(ceil(total_seconds / 86400)))
+
+    def has_expired(self):
+        return self.days_left <= 0
 
 
-class Payment(models.Model):
-    """Payments made by clients for their memberships."""
+class Machine(models.Model):
+    """Gym machine that can be reserved by clients."""
 
-    class Method(models.TextChoices):
-        EFECTIVO = 'Efectivo', 'Efectivo'
-        TARJETA = 'Tarjeta', 'Tarjeta'
-        TRANSFERENCIA = 'Transferencia', 'Transferencia'
-
-    client_membership = models.ForeignKey(ClientMembership, on_delete=models.CASCADE, related_name='payments')
-    payment_date = models.DateField()
-    amount = models.DecimalField(max_digits=10, decimal_places=2, validators=[MinValueValidator(0)])
-    payment_method = models.CharField(max_length=20, choices=Method.choices)
+    name = models.CharField(max_length=120, unique=True)
+    description = models.TextField(blank=True)
+    active = models.BooleanField(default=True)
     created_at = models.DateTimeField(auto_now_add=True)
 
+    class Meta:
+        ordering = ('name',)
+
     def __str__(self):
-        return f"Pago {self.amount} - {self.payment_method}"
+        return self.name
+
+
+class Reservation(models.Model):
+    """Reservation of a machine within a time slot."""
+
+    machine = models.ForeignKey(Machine, on_delete=models.CASCADE, related_name='reservations')
+    user = models.ForeignKey(User, on_delete=models.CASCADE, related_name='reservations')
+    start_time = models.DateTimeField()
+    end_time = models.DateTimeField()
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        ordering = ('start_time',)
+        constraints = [
+            models.UniqueConstraint(fields=('machine', 'start_time'), name='machine_unique_slot_start'),
+        ]
+
+    def __str__(self):
+        return f"{self.machine.name} - {self.start_time:%Y-%m-%d %H:%M}"
+
+    def clean(self):
+        if self.end_time <= self.start_time:
+            raise ValidationError('La hora final debe ser mayor que la hora inicial.')
+
+        overlapping = (
+            Reservation.objects.filter(machine=self.machine)
+            .exclude(pk=self.pk)
+            .filter(start_time__lt=self.end_time, end_time__gt=self.start_time)
+        )
+        if overlapping.exists():
+            raise ValidationError('La máquina ya está reservada en ese horario.')
+
+    def save(self, *args, **kwargs):
+        self.full_clean()
+        return super().save(*args, **kwargs)
