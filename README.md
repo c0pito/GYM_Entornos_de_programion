@@ -90,3 +90,26 @@ Tablas principales inferidas: usuarios, membresias, pagos, etc.
 Agregar más detalles al README.
 Deploy en servidor (e.g., Heroku para backend).
 Tests unitarios con JUnit.
+
+## Datos de ejemplo para `gym_fullstack`
+
+Si quieres probar el nuevo backend basado en Django/MongoDB que vive en `gym_fullstack/backend`, después de crear y activar tu
+entorno virtual instala las dependencias (por ejemplo, `pip install -r requirements.txt`) y ejecuta:
+
+```bash
+cd gym_fullstack/backend
+python manage.py migrate
+python manage.py shell < ../database/seed/seed_data.py
+```
+
+El comando `migrate` prepara el esquema y, a continuación, el script `seed_data.py` pobla la base de datos con usuarios y
+catálogos imprescindibles. El seed es idempotente, por lo que puedes ejecutarlo varias veces sin generar duplicados.
+
+Credenciales creadas automáticamente:
+
+- `admin@gym.com` / `Admin123!` (superusuario/documentado en el seed).
+- `coach@gym.com` / `Coach123!`.
+- `cliente@gym.com` / `Cliente123!`.
+- `pepito1@gym.com` … `pepito10@gym.com` / `Pepito123!`.
+
+Además, el seed registra los planes base, las máquinas y reservas de ejemplo para facilitar la verificación del frontend.
