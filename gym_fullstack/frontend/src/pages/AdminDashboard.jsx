@@ -7,16 +7,18 @@ import '../styles/dashboard.css';
 const membershipStatus = ['Activa', 'Pendiente', 'Vencida'];
 const paymentMethods = ['Efectivo', 'Tarjeta', 'Transferencia'];
 
-export default function AdminDashboard() {
+export default function AdminDashboard({ initialTab = 'usuarios' }) {
   const { user, logout } = useAuth();
   const { request } = useApi();
 
-  const [activeTab, setActiveTab] = useState('usuarios');
+  const [activeTab, setActiveTab] = useState(initialTab);
 
   const [usuarios, setUsuarios] = useState([]);
   const [membresias, setMembresias] = useState([]);
   const [asignaciones, setAsignaciones] = useState([]);
   const [pagos, setPagos] = useState([]);
+  const [machines, setMachines] = useState([]);
+  const [agenda, setAgenda] = useState([]);
 
   const [formUser, setFormUser] = useState({
     nombre: '',
@@ -45,9 +47,15 @@ export default function AdminDashboard() {
     monto: '',
     metodoPago: 'Efectivo'
   });
+  const [formMachine, setFormMachine] = useState({ nombre: '', descripcion: '', ubicacion: '' });
+  const [agendaFilters, setAgendaFilters] = useState({ machineId: '', date: '' });
 
   const [message, setMessage] = useState(null);
   const [messageType, setMessageType] = useState('success');
+
+  useEffect(() => {
+    setActiveTab(initialTab);
+  }, [initialTab]);
 
   const clientes = useMemo(
     () => usuarios.filter((item) => item.rol === 'Cliente'),
@@ -88,6 +96,24 @@ export default function AdminDashboard() {
     setPagos(data);
   };
 
+  const loadMachines = async () => {
+    const data = await request('/machines/');
+    setMachines(Array.isArray(data) ? data : []);
+  };
+
+  const loadAgenda = async (filters = agendaFilters) => {
+    const params = new URLSearchParams();
+    if (filters.machineId) {
+      params.append('machine_id', filters.machineId);
+    }
+    if (filters.date) {
+      params.append('date', filters.date);
+    }
+    const query = params.toString();
+    const data = await request(query ? `/reservations/?${query}` : '/reservations/');
+    setAgenda(Array.isArray(data) ? data : []);
+  };
+
   useEffect(() => {
     if (activeTab === 'usuarios') {
       loadUsuarios().catch((error) => showMessage(error.message, 'error'));
@@ -101,8 +127,20 @@ export default function AdminDashboard() {
       Promise.all([loadPagos(), loadAsignaciones()]).catch((error) =>
         showMessage(error.message, 'error')
       );
+    } else if (activeTab === 'maquinas') {
+      loadMachines().catch((error) => showMessage(error.message, 'error'));
+    } else if (activeTab === 'agenda') {
+      Promise.all([loadMachines(), loadAgenda()]).catch((error) =>
+        showMessage(error.message, 'error')
+      );
     }
   }, [activeTab]);
+
+  useEffect(() => {
+    if (activeTab === 'agenda') {
+      loadAgenda(agendaFilters).catch((error) => showMessage(error.message, 'error'));
+    }
+  }, [agendaFilters, activeTab]);
 
   const handleCreateUser = async (event) => {
     event.preventDefault();
@@ -205,10 +243,60 @@ export default function AdminDashboard() {
     }
   };
 
+  const handleCreateMachine = async (event) => {
+    event.preventDefault();
+    try {
+      await request('/machines/', { method: 'POST', body: formMachine });
+      showMessage('Máquina registrada.');
+      setFormMachine({ nombre: '', descripcion: '', ubicacion: '' });
+      loadMachines();
+    } catch (error) {
+      showMessage(error.message, 'error');
+    }
+  };
+
+  const handleDeleteMachine = async (id) => {
+    if (!window.confirm('¿Eliminar esta máquina?')) return;
+    try {
+      await request(`/machines/${id}`, { method: 'DELETE' });
+      showMessage('Máquina eliminada.');
+      loadMachines();
+    } catch (error) {
+      showMessage(error.message, 'error');
+    }
+  };
+
+  const handleCancelReservation = async (id) => {
+    if (!window.confirm('¿Cancelar esta reserva?')) return;
+    try {
+      await request(`/reservations/${id}`, { method: 'DELETE' });
+      showMessage('Reserva cancelada.');
+      loadAgenda();
+    } catch (error) {
+      showMessage(error.message, 'error');
+    }
+  };
+
   const totalIngresos = useMemo(
     () => pagos.reduce((acc, pago) => acc + Number(pago.monto || 0), 0),
     [pagos]
   );
+
+  const formatHourRange = (start, end) => {
+    if (!start) return 'N/A';
+    const inicio = new Date(start);
+    const fin = new Date(end || start);
+    return `${inicio.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })} - ${fin.toLocaleTimeString([], {
+      hour: '2-digit',
+      minute: '2-digit'
+    })}`;
+  };
+
+  const getStatusBadge = (status) => {
+    if (status === 'Cancelada') return 'badge-danger';
+    if (status === 'Pendiente') return 'badge-warning';
+    return 'badge-success';
+  };
 
   return (
     <div className="main-layout">
@@ -232,6 +320,12 @@ export default function AdminDashboard() {
           </button>
           <button className={`nav-button ${activeTab === 'pagos' ? 'active' : ''}`} onClick={() => setActiveTab('pagos')}>
             Pagos
+          </button>
+          <button className={`nav-button ${activeTab === 'maquinas' ? 'active' : ''}`} onClick={() => setActiveTab('maquinas')}>
+            Máquinas
+          </button>
+          <button className={`nav-button ${activeTab === 'agenda' ? 'active' : ''}`} onClick={() => setActiveTab('agenda')}>
+            Agenda
           </button>
         </nav>
 
@@ -555,6 +649,129 @@ export default function AdminDashboard() {
                         </td>
                       </tr>
                     ))
+                  )}
+                </tbody>
+              </table>
+            </div>
+          </section>
+        )}
+
+        {activeTab === 'maquinas' && (
+          <section>
+            <div className="section-header">
+              <h1>Máquinas y equipos</h1>
+            </div>
+
+            <form className="form-grid" onSubmit={handleCreateMachine}>
+              <div className="form-field">
+                <label>Nombre
+                  <input value={formMachine.nombre} onChange={(event) => setFormMachine({ ...formMachine, nombre: event.target.value })} required />
+                </label>
+              </div>
+              <div className="form-field">
+                <label>Descripción
+                  <textarea value={formMachine.descripcion} onChange={(event) => setFormMachine({ ...formMachine, descripcion: event.target.value })} rows={3} />
+                </label>
+              </div>
+              <div className="form-field">
+                <label>Ubicación
+                  <input value={formMachine.ubicacion} onChange={(event) => setFormMachine({ ...formMachine, ubicacion: event.target.value })} placeholder="Sala de fuerza, piso 2..." />
+                </label>
+              </div>
+              <div className="form-field" style={{ alignSelf: 'end' }}>
+                <button className="primary-button" type="submit">Agregar máquina</button>
+              </div>
+            </form>
+
+            <div className="card-grid">
+              {machines.length === 0 ? (
+                <div className="card">
+                  <h3>No hay máquinas registradas</h3>
+                  <p>Agrega tus equipos para habilitar la agenda de reservas.</p>
+                </div>
+              ) : (
+                machines.map((machine) => (
+                  <div className="card" key={machine.id}>
+                    <h3>{machine.nombre || machine.name}</h3>
+                    <p>{machine.descripcion || machine.description}</p>
+                    <span className="badge badge-info">{machine.ubicacion || machine.location || 'Sin ubicación'}</span>
+                    <button className="action-button" onClick={() => handleDeleteMachine(machine.id)}>Eliminar</button>
+                  </div>
+                ))
+              )}
+            </div>
+          </section>
+        )}
+
+        {activeTab === 'agenda' && (
+          <section>
+            <div className="section-header">
+              <h1>Agenda de reservas</h1>
+            </div>
+
+            <div className="form-grid">
+              <div className="form-field">
+                <label>Máquina
+                  <select value={agendaFilters.machineId} onChange={(event) => setAgendaFilters((prev) => ({ ...prev, machineId: event.target.value }))}>
+                    <option value="">Todas</option>
+                    {machines.map((machine) => (
+                      <option key={machine.id} value={machine.id}>
+                        {machine.nombre || machine.name}
+                      </option>
+                    ))}
+                  </select>
+                </label>
+              </div>
+              <div className="form-field">
+                <label>Fecha
+                  <input type="date" value={agendaFilters.date} onChange={(event) => setAgendaFilters((prev) => ({ ...prev, date: event.target.value }))} />
+                </label>
+              </div>
+            </div>
+
+            <div className="table-wrapper">
+              <table>
+                <thead>
+                  <tr>
+                    <th>Cliente</th>
+                    <th>Máquina</th>
+                    <th>Fecha</th>
+                    <th>Horario</th>
+                    <th>Estado</th>
+                    <th></th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {agenda.length === 0 ? (
+                    <tr>
+                      <td colSpan={6}>No hay reservas en la agenda para los filtros seleccionados.</td>
+                    </tr>
+                  ) : (
+                    agenda.map((reserva) => {
+                      const status = reserva.status || 'Confirmada';
+                      const cliente =
+                        (reserva.usuario?.nombre && `${reserva.usuario.nombre} ${reserva.usuario.apellido || ''}`.trim()) ||
+                        reserva.clienteNombre ||
+                        reserva.client_name ||
+                        'N/A';
+                      const machineLabel = reserva.machine?.nombre || reserva.machine_name || 'N/A';
+                      const start = reserva.start_time || reserva.start;
+                      const end = reserva.end_time || reserva.end;
+                      return (
+                        <tr key={reserva.id}>
+                          <td>{cliente}</td>
+                          <td>{machineLabel}</td>
+                          <td>{start ? new Date(start).toLocaleDateString() : 'N/A'}</td>
+                          <td>{start ? formatHourRange(start, end) : 'N/A'}</td>
+                          <td>
+                            <span className={`badge ${getStatusBadge(status)}`}>{status}</span>
+                          </td>
+                          <td>
+                            <button className="action-button" onClick={() => handleCancelReservation(reserva.id)}>Cancelar</button>
+                          </td>
+                        </tr>
+                      );
+                    })
                   )}
                 </tbody>
               </table>
