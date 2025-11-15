@@ -1,92 +1,95 @@
 # GYM_Entornos_de_programion
-Se creara un Gym
-1. Descripción General del Proyecto
-Este proyecto es un Sistema de Gestión de Gimnasio (Gym Management System) diseñado para administrar usuarios, membresías, clases y pagos en un gimnasio. Utiliza una arquitectura web con separación clara entre frontend, backend y base de datos.
 
-Objetivo principal: Optimizar la gestión diaria de un gimnasio mediante una aplicación web.
-Estado actual: En desarrollo. El repositorio incluye frontend, backend y esquema de base de datos.
-Tecnologías clave:
+Este repositorio contiene **dos implementaciones** del gestor de gimnasio solicitado. La versión vigente (full‑stack React + Django REST) vive en `gym_fullstack/` y convive con el código legado (frontend HTML + backend Spring Boot + MySQL) para referencia histórica.
 
-Frontend: HTML, CSS, JavaScript (en FronEnd_Gym).
-Backend: Spring Boot (Java) en Gimnasio_Copia2.
-Base de datos: MySQL (esquema en gimnasio3000.sql).
+> Si estabas buscando el proyecto "nuevo" que se pidió crear, entra directamente a [`gym_fullstack/`](./gym_fullstack). Ahí encontrarás el frontend en React/Vite, el backend en Django REST Framework y los scripts de seed.
 
+## Estructura del repositorio
 
-Herramientas:
+| Carpeta | Descripción |
+| --- | --- |
+| `gym_fullstack/frontend/` | Aplicación React + Vite que consume la API REST. Incluye contexto de autenticación, pantallas de admin/cliente y estilos. |
+| `gym_fullstack/backend/` | Proyecto Django REST Framework con autenticación JWT, endpoints de usuarios/membresías y documentación específica en su propio README. |
+| `gym_fullstack/database/` | Recursos para datos de ejemplo (seed) y un `docker-compose` opcional para levantar dependencias. |
+| `FronEnd_Gym/` | Frontend original en HTML/JS plano (legacy). |
+| `Gimnasio_Copia2/` | Backend legacy en Spring Boot + MySQL. |
+| `gimnasio3000.sql` | Script SQL utilizado por la versión legacy. |
 
-IntelliJ IDEA para el backend.
-Visual Studio Code para el frontend.
-MySQL Workbench para la base de datos.
+## Cómo ejecutar la solución React + Django
 
+### 1. Backend (Django REST)
 
+1. Instala dependencias:
+   ```bash
+   cd gym_fullstack/backend
+   python -m venv .venv
+   source .venv/bin/activate  # En Windows: .venv\\Scripts\\activate
+   pip install -r requirements.txt
+   ```
+2. Configura variables de entorno (puedes crear un `.env` en la carpeta `backend`):
+   ```env
+   DJANGO_SECRET_KEY="cambia-esta-clave"
+   MONGO_DB_URI="mongodb://localhost:27017"
+   MONGO_DB_NAME="gymdb"
+   DJANGO_DEBUG=True
+   CORS_ALLOWED_ORIGINS="http://localhost:5173"
+   CSRF_TRUSTED_ORIGINS="http://localhost:5173"
+   ```
+3. Aplica migraciones y crea el superusuario:
+   ```bash
+   python manage.py makemigrations
+   python manage.py migrate
+   python manage.py createsuperuser
+   ```
+4. (Opcional) Carga datos de ejemplo:
+   ```bash
+   python manage.py shell < ../database/seed/seed_data.py
+   ```
+5. Ejecuta el servidor de desarrollo:
+   ```bash
+   python manage.py runserver 0.0.0.0:8000
+   ```
 
-2. Estructura del Proyecto
-Basado en las carpetas y archivos del repositorio:
+El backend quedará expuesto en `http://localhost:8000/api/`.
 
-<img width="435" height="829" alt="image" src="https://github.com/user-attachments/assets/af833fd7-116f-41e3-8ba6-7073c31711fe" />
+### 2. Frontend (React + Vite)
 
+1. Instala dependencias:
+   ```bash
+   cd gym_fullstack/frontend
+   npm install
+   ```
+2. (Opcional) crea `.env` para apuntar al backend si usas otro host:
+   ```env
+   VITE_API_BASE=http://localhost:8000/api
+   ```
+3. Arranca el modo desarrollo:
+   ```bash
+   npm run dev
+   ```
 
-3. Instalación y Configuración
+La interfaz estará disponible en `http://localhost:5173` y consumirá la API anterior.
 
-Clonar el repositorio:
-git clone https://github.com/miguelitowashere/GYM_Entornos_de_programion.git
-cd GYM_Entornos_de_programion
-Configurar la Base de Datos:
+### 3. Credenciales de ejemplo
 
-Abre MySQL Workbench.
-Crea una BD: CREATE DATABASE gym_db;.
-Ejecuta gimnasio3000.sql para crear las tablas.
-Asegúrate de que las credenciales en application.properties coincidan (e.g., spring.datasource.username=root, spring.datasource.password=tu_password).
+Si ejecutaste el script de seed del backend, dispones de:
 
+- `admin@gym.com` / `Admin123!`
+- `coach@gym.com` / `Coach123!`
+- `cliente@gym.com` / `Cliente123!`
 
-Backend (Gimnasio_Copia2):
+(consulta `gym_fullstack/database/seed/seed_data.py` para más usuarios/roles).
 
-Abre la carpeta Gimnasio_Copia2 en IntelliJ.
-Importa como proyecto Maven.
-Configura application.properties con tu BD:
+## Estado del proyecto
 
-spring.datasource.url=jdbc:mysql://localhost:3306/gym_db
-spring.datasource.username=root
-spring.datasource.password=tu_password
-spring.jpa.hibernate.ddl-auto=update
+- **En desarrollo activo**: la rama `work` contiene los últimos cambios.
+- **Stack recomendado**: React + Django en `gym_fullstack/`.
+- **Stack legacy**: permanece disponible por si necesitas revisar la versión previa basada en Spring Boot/MySQL y el frontend estático.
 
-Ejecuta GimnasioApplication.java: mvn spring-boot:run.
-El servidor corre en http://localhost:8080.
+## Recursos adicionales
 
+- Documentación específica del backend: [`gym_fullstack/backend/README.md`](./gym_fullstack/backend/README.md)
+- Documentación específica del frontend: [`gym_fullstack/frontend/README.md`](./gym_fullstack/frontend/README.md)
+- Script SQL legacy: [`gimnasio3000.sql`](./gimnasio3000.sql)
 
-Frontend (FronEnd_Gym):
-
-Abre FronEnd_Gym en VS Code.
-Usa Live Server para servir login.html en http://localhost:5500.
-Conecta al backend editando JS (e.g., fetch('http://localhost:8080/api/usuarios')).
-
-
-Pruebas:
-
-Accede a http://localhost:5500/login.html.
-Prueba APIs con Postman (e.g., GET /api/usuarios).
-
-
-
-4. Funcionalidades Principales
-
-Gestión de Usuarios: Registro, edición y eliminación (vía UsuarioControlador).
-Membresías: Administración de planes (vía MembresiaControlador).
-Pagos: Registro y seguimiento (vía PagoControlador).
-Autenticación: Login con JWT (vía SecurityConfig y JwtUtil).
-Interfaz: Páginas como administrador.html y cliente.html para gestión.
-
-5. Base de Datos (MySQL)
-
-Esquema definido en gimnasio3000.sql.
-Tablas principales inferidas: usuarios, membresias, pagos, etc.
-
-<img src="https://drive.google.com/uc?export=view&id=1h79YJGnQILi5VTn0D7gpJUX9OQO1OHsQ" 
-     alt="Diagrama de la base de datos gimnasio3000" 
-     width="435" height="829">
-
-6. Posibles Mejoras
-
-Agregar más detalles al README.
-Deploy en servidor (e.g., Heroku para backend).
-Tests unitarios con JUnit.
+Con estas instrucciones puedes clonar el repo, navegar al árbol moderno y ejecutar toda la solución desde Visual Studio Code o tu entorno favorito.
